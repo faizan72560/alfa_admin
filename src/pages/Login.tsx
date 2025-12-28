@@ -6,22 +6,32 @@ import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { toast } from "sonner";
 import { Lock } from "lucide-react";
+import { login } from "@/services/auth";
 
 const Login = () => {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  const [isLoading, setIsLoading] = useState(false);
   const navigate = useNavigate();
 
-  const handleLogin = (e: React.FormEvent) => {
+  const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
-    
-    // Demo credentials
-    if (email === "admin@example.com" && password === "password") {
-      sessionStorage.setItem("isAuthenticated", "true");
-      toast.success("Login successful!");
-      navigate("/");
-    } else {
-      toast.error("Invalid credentials. Try admin@example.com / password");
+    setIsLoading(true);
+
+    try {
+      const response = await login(email, password);
+      // Store token
+      if (response.accessToken) {
+        localStorage.setItem("accessToken", response.accessToken);
+        sessionStorage.setItem("isAuthenticated", "true"); // Keeping this for compatibility if used elsewhere
+        toast.success("Login successful!");
+        navigate("/");
+      }
+    } catch (error: any) {
+      console.error(error);
+      toast.error(error.message || "Invalid credentials. Please try again.");
+    } finally {
+      setIsLoading(false);
     }
   };
 
@@ -59,12 +69,9 @@ const Login = () => {
                 required
               />
             </div>
-            <Button type="submit" className="w-full">
-              Sign In
+            <Button type="submit" className="w-full" disabled={isLoading}>
+              {isLoading ? "Signing In..." : "Sign In"}
             </Button>
-            <p className="text-xs text-center text-muted-foreground mt-4">
-              Demo credentials: admin@example.com / password
-            </p>
           </form>
         </CardContent>
       </Card>

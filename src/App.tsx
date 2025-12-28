@@ -12,6 +12,7 @@ import Transfers from "./pages/Transfers";
 import Notifications from "./pages/Notifications";
 import Export from "./pages/Export";
 import Settings from "./pages/Settings";
+import Contacts from "./pages/Contacts";
 import Login from "./pages/Login";
 import NotFound from "./pages/NotFound";
 
@@ -46,6 +47,7 @@ const App = () => (
                         <Route path="/notifications" element={<Notifications />} />
                         <Route path="/export" element={<Export />} />
                         <Route path="/settings" element={<Settings />} />
+                        <Route path="/contacts" element={<Contacts />} />
                         <Route path="*" element={<NotFound />} />
                       </Routes>
                     </main>

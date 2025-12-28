@@ -1,4 +1,4 @@
-import { LayoutDashboard, Users, UserCog, GitPullRequest, Bell, FileDown, Settings, LogOut } from "lucide-react";
+import { LayoutDashboard, Users, UserCog, GitPullRequest, Bell, FileDown, Settings, LogOut, Mail } from "lucide-react";
 import { NavLink } from "@/components/NavLink";
 import { useNavigate } from "react-router-dom";
 import { toast } from "sonner";
@@ -20,6 +20,7 @@ const menuItems = [
   { title: "User Management", url: "/users", icon: Users },
   { title: "Player Management", url: "/players", icon: UserCog },
   { title: "Transfer Requests", url: "/transfers", icon: GitPullRequest },
+  { title: "Contact Requests", url: "/contacts", icon: Mail },
   { title: "Notifications", url: "/notifications", icon: Bell },
   { title: "Export Data", url: "/export", icon: FileDown },
   { title: "Settings", url: "/settings", icon: Settings },
@@ -40,7 +41,7 @@ export function AppSidebar() {
         <div className="px-6 py-4 border-b border-sidebar-border">
           <h1 className="text-xl font-bold text-sidebar-foreground">Admin Panel</h1>
         </div>
-        
+
         <SidebarGroup>
           <SidebarGroupLabel className="px-6 text-sidebar-foreground/60">
             Main Menu
@@ -67,8 +68,8 @@ export function AppSidebar() {
         </SidebarGroup>
       </SidebarContent>
       <SidebarFooter className="p-4 border-t border-sidebar-border">
-        <Button 
-          variant="ghost" 
+        <Button
+          variant="ghost"
           className="w-full justify-start text-sidebar-foreground/70 hover:text-sidebar-foreground"
           onClick={handleLogout}
         >

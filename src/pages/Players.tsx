@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Search, Eye, CheckCircle, XCircle, RotateCcw } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -20,30 +20,79 @@ import {
   SheetTitle,
   SheetTrigger,
 } from "@/components/ui/sheet";
-
-const mockPlayers = [
-  { id: 1, name: "Alex Martinez", agent: "John Doe", status: "Pending Review", lastUpdated: "2024-01-15", progress: 60 },
-  { id: 2, name: "Chris Anderson", agent: "John Doe", status: "Approved", lastUpdated: "2024-01-14", progress: 100 },
-  { id: 3, name: "Jordan Lee", agent: "Jane Smith", status: "Revision Needed", lastUpdated: "2024-01-13", progress: 40 },
-  { id: 4, name: "Taylor Brown", agent: "Jane Smith", status: "Pending Review", lastUpdated: "2024-01-12", progress: 75 },
-  { id: 5, name: "Casey Wilson", agent: "John Doe", status: "Submitted", lastUpdated: "2024-01-11", progress: 85 },
-];
+import { getPlayers, verifyPlayer, deletePlayer, Player } from "@/services/players";
+import { toast } from "sonner";
 
 const Players = () => {
   const [searchTerm, setSearchTerm] = useState("");
+  const [players, setPlayers] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
 
-  const filteredPlayers = mockPlayers.filter((player) =>
+  useEffect(() => {
+    fetchPlayers();
+  }, []);
+
+  const fetchPlayers = async () => {
+    try {
+      setLoading(true);
+      const data = await getPlayers();
+      // Map API data to UI model
+      const mappedPlayers = data.map((p: any) => ({
+        id: p.playerId,
+        name: `${p.firstName} ${p.lastName}`,
+        agent: p.agentId || "Unknown Agent",
+        status: p.adminApprovalStatus || "Pending",
+        lastUpdated: p.updatedAt ? new Date(p.updatedAt).toLocaleDateString() : "N/A",
+        details: p
+      }));
+      setPlayers(mappedPlayers);
+    } catch (error) {
+      console.error(error);
+      toast.error("Failed to load players");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleVerify = async (id: string) => {
+    try {
+      await verifyPlayer(id);
+      toast.success("Player verified successfully");
+      fetchPlayers();
+    } catch (error: any) {
+      toast.error(error.message || "Failed to verify player");
+    }
+  };
+
+  const handleDelete = async (id: string) => {
+    if (!confirm("Are you sure you want to delete this player?")) return;
+    try {
+      await deletePlayer(id);
+      toast.success("Player deleted successfully");
+      fetchPlayers();
+    } catch (error: any) {
+      toast.error(error.message || "Failed to delete player");
+    }
+  };
+
+  const filteredPlayers = players.filter((player) =>
     player.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
     player.agent.toLowerCase().includes(searchTerm.toLowerCase())
   );
 
   const getStatusVariant = (status: string) => {
-    switch (status) {
-      case "Approved": return "active";
-      case "Pending Review": return "pending";
-      case "Submitted": return "pending";
-      case "Revision Needed": return "warning";
-      default: return "secondary";
+    switch (status.toLowerCase()) {
+      case "approved":
+      case "active":
+        return "default";
+      case "pending":
+      case "submitted":
+        return "secondary";
+      case "rejected":
+      case "inactive":
+        return "destructive";
+      default:
+        return "secondary";
     }
   };
 
@@ -73,115 +122,94 @@ const Players = () => {
               <TableHead>Player Name</TableHead>
               <TableHead>Assigned Agent</TableHead>
               <TableHead>Status</TableHead>
-              <TableHead>Progress</TableHead>
               <TableHead>Last Updated</TableHead>
               <TableHead className="text-right">Actions</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
-            {filteredPlayers.map((player) => (
-              <TableRow key={player.id}>
-                <TableCell className="font-medium">{player.name}</TableCell>
-                <TableCell>{player.agent}</TableCell>
-                <TableCell>
-                  <Badge variant={getStatusVariant(player.status)}>
-                    {player.status}
-                  </Badge>
-                </TableCell>
-                <TableCell>
-                  <div className="flex items-center gap-2">
-                    <div className="w-24 bg-muted rounded-full h-2">
-                      <div
-                        className="bg-primary h-2 rounded-full transition-all"
-                        style={{ width: `${player.progress}%` }}
-                      />
-                    </div>
-                    <span className="text-sm text-muted-foreground">{player.progress}%</span>
-                  </div>
-                </TableCell>
-                <TableCell className="text-muted-foreground">{player.lastUpdated}</TableCell>
-                <TableCell className="text-right">
-                  <div className="flex justify-end gap-2">
-                    <Sheet>
-                      <SheetTrigger asChild>
-                        <Button variant="outline" size="sm">
-                          <Eye className="h-4 w-4 mr-1" />
-                          View
-                        </Button>
-                      </SheetTrigger>
-                      <SheetContent className="w-full sm:max-w-xl bg-background">
-                        <SheetHeader>
-                          <SheetTitle>{player.name}</SheetTitle>
-                          <SheetDescription>Player Profile & Documents</SheetDescription>
-                        </SheetHeader>
-                        <div className="mt-6 space-y-6">
-                          <div>
-                            <h3 className="font-semibold mb-3">Profile Information</h3>
-                            <div className="space-y-2 text-sm">
-                              <div className="flex justify-between">
-                                <span className="text-muted-foreground">Assigned Agent:</span>
-                                <span className="font-medium">{player.agent}</span>
-                              </div>
-                              <div className="flex justify-between">
-                                <span className="text-muted-foreground">Status:</span>
-                                <Badge variant={getStatusVariant(player.status)}>{player.status}</Badge>
-                              </div>
-                              <div className="flex justify-between">
-                                <span className="text-muted-foreground">Last Updated:</span>
-                                <span className="font-medium">{player.lastUpdated}</span>
-                              </div>
-                            </div>
-                          </div>
-
-                          <div>
-                            <h3 className="font-semibold mb-3">Timeline</h3>
-                            <div className="space-y-4">
-                              {[
-                                { stage: "Profile Created", date: "2024-01-05", completed: true },
-                                { stage: "Documents Uploaded", date: "2024-01-08", completed: true },
-                                { stage: "Initial Review", date: "2024-01-12", completed: player.progress >= 60 },
-                                { stage: "Final Approval", date: "Pending", completed: player.progress === 100 },
-                              ].map((item, i) => (
-                                <div key={i} className="flex items-start gap-3">
-                                  <div className={`h-2 w-2 rounded-full mt-2 ${item.completed ? 'bg-success' : 'bg-muted'}`}></div>
-                                  <div className="flex-1">
-                                    <p className={`text-sm ${item.completed ? 'text-foreground font-medium' : 'text-muted-foreground'}`}>
-                                      {item.stage}
-                                    </p>
-                                    <p className="text-xs text-muted-foreground mt-1">{item.date}</p>
-                                  </div>
-                                </div>
-                              ))}
-                            </div>
-                          </div>
-
-                          <div className="flex gap-3 pt-4 border-t border-border">
-                            <Button className="flex-1 bg-success hover:bg-success/90 text-success-foreground">
-                              <CheckCircle className="h-4 w-4 mr-2" />
-                              Approve
-                            </Button>
-                            <Button variant="outline" className="flex-1">
-                              <RotateCcw className="h-4 w-4 mr-2" />
-                              Send Back
-                            </Button>
-                            <Button variant="destructive" className="flex-1">
-                              <XCircle className="h-4 w-4 mr-2" />
-                              Reject
-                            </Button>
-                          </div>
-                        </div>
-                      </SheetContent>
-                    </Sheet>
-                  </div>
-                </TableCell>
+            {loading ? (
+              <TableRow>
+                <TableCell colSpan={5} className="text-center py-4">Loading players...</TableCell>
               </TableRow>
-            ))}
+            ) : filteredPlayers.length === 0 ? (
+              <TableRow>
+                <TableCell colSpan={5} className="text-center py-4">No players found.</TableCell>
+              </TableRow>
+            ) : (
+              filteredPlayers.map((player) => (
+                <TableRow key={player.id}>
+                  <TableCell className="font-medium">{player.name}</TableCell>
+                  <TableCell className="max-w-[150px] truncate" title={player.agent}>{player.agent}</TableCell>
+                  <TableCell>
+                    <Badge variant={getStatusVariant(player.status)}>
+                      {player.status}
+                    </Badge>
+                  </TableCell>
+                  <TableCell className="text-muted-foreground">{player.lastUpdated}</TableCell>
+                  <TableCell className="text-right">
+                    <div className="flex justify-end gap-2">
+                      <Sheet>
+                        <SheetTrigger asChild>
+                          <Button variant="outline" size="sm">
+                            <Eye className="h-4 w-4 mr-1" />
+                            View
+                          </Button>
+                        </SheetTrigger>
+                        <SheetContent className="w-full sm:max-w-xl bg-background">
+                          <SheetHeader>
+                            <SheetTitle>{player.name}</SheetTitle>
+                            <SheetDescription>Player Profile & Documents</SheetDescription>
+                          </SheetHeader>
+                          <div className="mt-6 space-y-6">
+                            <div>
+                              <h3 className="font-semibold mb-3">Profile Information</h3>
+                              <div className="space-y-2 text-sm">
+                                <div className="flex justify-between">
+                                  <span className="text-muted-foreground">Assigned Agent:</span>
+                                  <span className="font-medium">{player.agent}</span>
+                                </div>
+                                <div className="flex justify-between">
+                                  <span className="text-muted-foreground">Status:</span>
+                                  <Badge variant={getStatusVariant(player.status)}>{player.status}</Badge>
+                                </div>
+                                <div className="flex justify-between">
+                                  <span className="text-muted-foreground">Main Position:</span>
+                                  <span className="font-medium">{player.details.mainPosition || 'N/A'}</span>
+                                </div>
+                                <div className="flex justify-between">
+                                  <span className="text-muted-foreground">Club:</span>
+                                  <span className="font-medium">{player.details.currentClub || 'Free Agent'}</span>
+                                </div>
+                              </div>
+                            </div>
+
+                            <div className="flex gap-3 mt-8">
+                              {player.status.toLowerCase() !== 'approved' && (
+                                <Button className="flex-1" onClick={() => handleVerify(player.id)}>
+                                  <CheckCircle className="h-4 w-4 mr-2" />
+                                  Approve
+                                </Button>
+                              )}
+                              <Button variant="destructive" className="flex-1" onClick={() => handleDelete(player.id)}>
+                                <XCircle className="h-4 w-4 mr-2" />
+                                Delete
+                              </Button>
+                            </div>
+                          </div>
+                        </SheetContent>
+                      </Sheet>
+                    </div>
+                  </TableCell>
+                </TableRow>
+              ))
+            )}
           </TableBody>
         </Table>
 
+
         <div className="p-4 border-t border-border flex items-center justify-between">
           <p className="text-sm text-muted-foreground">
-            Showing {filteredPlayers.length} of {mockPlayers.length} players
+            Showing {filteredPlayers.length} players
           </p>
         </div>
       </Card>

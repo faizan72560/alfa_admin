@@ -1,11 +1,43 @@
+import { useState } from "react";
 import { Download, FileText, Users, GitPullRequest } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { toast } from "sonner";
 
 const Export = () => {
-  const handleExport = (type: string) => {
-    toast.success(`${type} exported successfully!`);
+  const [loading, setLoading] = useState<string | null>(null);
+
+  const handleExport = async (type: string, format: 'csv' | 'excel') => {
+    const endpoint = type === 'users' ? '/admin/export/users' : '/admin/export/transfers';
+    const token = localStorage.getItem('accessToken');
+
+    setLoading(`${type}-${format}`);
+    try {
+      const response = await fetch(`http://localhost:4000/api/v1${endpoint}?format=${format}`, {
+        headers: {
+          'Authorization': `Bearer ${token}`
+        }
+      });
+
+      if (!response.ok) throw new Error('Export failed');
+
+      const blob = await response.blob();
+      const url = window.URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `${type}-${new Date().toISOString().split('T')[0]}.${format === 'csv' ? 'csv' : 'xlsx'}`;
+      document.body.appendChild(a);
+      a.click();
+      window.URL.revokeObjectURL(url);
+      document.body.removeChild(a);
+
+      toast.success(`${type} ${format} exported successfully!`);
+    } catch (error) {
+      console.error(error);
+      toast.error(`Failed to export ${type}`);
+    } finally {
+      setLoading(null);
+    }
   };
 
   return (
@@ -29,19 +61,21 @@ const Export = () => {
           <CardContent className="space-y-4">
             <div className="flex gap-3">
               <Button
-                onClick={() => handleExport("Users CSV")}
+                onClick={() => handleExport("users", "csv")}
                 className="flex-1 bg-primary hover:bg-primary-hover text-primary-foreground"
+                disabled={loading === "users-csv"}
               >
                 <Download className="h-4 w-4 mr-2" />
-                Export CSV
+                {loading === "users-csv" ? "Exporting..." : "Export CSV"}
               </Button>
               <Button
-                onClick={() => handleExport("Users Excel")}
+                onClick={() => handleExport("users", "excel")}
                 variant="outline"
                 className="flex-1"
+                disabled={loading === "users-excel"}
               >
                 <FileText className="h-4 w-4 mr-2" />
-                Export Excel
+                {loading === "users-excel" ? "Exporting..." : "Export Excel"}
               </Button>
             </div>
             <p className="text-xs text-muted-foreground">
@@ -63,19 +97,21 @@ const Export = () => {
           <CardContent className="space-y-4">
             <div className="flex gap-3">
               <Button
-                onClick={() => handleExport("Transfers CSV")}
+                onClick={() => handleExport("transfers", "csv")}
                 className="flex-1 bg-primary hover:bg-primary-hover text-primary-foreground"
+                disabled={loading === "transfers-csv"}
               >
                 <Download className="h-4 w-4 mr-2" />
-                Export CSV
+                {loading === "transfers-csv" ? "Exporting..." : "Export CSV"}
               </Button>
               <Button
-                onClick={() => handleExport("Transfers Excel")}
+                onClick={() => handleExport("transfers", "excel")}
                 variant="outline"
                 className="flex-1"
+                disabled={loading === "transfers-excel"}
               >
                 <FileText className="h-4 w-4 mr-2" />
-                Export Excel
+                {loading === "transfers-excel" ? "Exporting..." : "Export Excel"}
               </Button>
             </div>
             <p className="text-xs text-muted-foreground">
@@ -84,73 +120,6 @@ const Export = () => {
           </CardContent>
         </Card>
 
-        <Card className="shadow-md">
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <Users className="h-5 w-5 text-warning" />
-              Agent Performance
-            </CardTitle>
-            <CardDescription>
-              Export agent activity and performance metrics
-            </CardDescription>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            <div className="flex gap-3">
-              <Button
-                onClick={() => handleExport("Agent Performance CSV")}
-                className="flex-1 bg-primary hover:bg-primary-hover text-primary-foreground"
-              >
-                <Download className="h-4 w-4 mr-2" />
-                Export CSV
-              </Button>
-              <Button
-                onClick={() => handleExport("Agent Performance Excel")}
-                variant="outline"
-                className="flex-1"
-              >
-                <FileText className="h-4 w-4 mr-2" />
-                Export Excel
-              </Button>
-            </div>
-            <p className="text-xs text-muted-foreground">
-              Includes: Agent Name, Total Players, Successful Transfers, Rating
-            </p>
-          </CardContent>
-        </Card>
-
-        <Card className="shadow-md">
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <FileText className="h-5 w-5 text-destructive" />
-              Full System Report
-            </CardTitle>
-            <CardDescription>
-              Complete export of all system data
-            </CardDescription>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            <div className="flex gap-3">
-              <Button
-                onClick={() => handleExport("Full Report CSV")}
-                className="flex-1 bg-primary hover:bg-primary-hover text-primary-foreground"
-              >
-                <Download className="h-4 w-4 mr-2" />
-                Export CSV
-              </Button>
-              <Button
-                onClick={() => handleExport("Full Report Excel")}
-                variant="outline"
-                className="flex-1"
-              >
-                <FileText className="h-4 w-4 mr-2" />
-                Export Excel
-              </Button>
-            </div>
-            <p className="text-xs text-muted-foreground">
-              Includes: All users, players, transfers, and system logs
-            </p>
-          </CardContent>
-        </Card>
       </div>
 
       <Card className="shadow-md bg-muted/30">
